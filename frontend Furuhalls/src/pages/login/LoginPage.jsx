@@ -4,6 +4,14 @@ import { useAuth } from '../../hooks/useAuth.jsx';
 import { validateEmail, validatePassword } from '../../utils/validationUtils';
 import './LoginPage.css';
 
+// -------------------------------------------------------------------
+// 🔥 PATH RESOLUTION FAILED. 
+// Using the public folder strategy (absolute path) instead.
+// Ensure your logo file is now in the project's root /public directory.
+// -------------------------------------------------------------------
+// We remove the import:
+// import logoSrc from '../../assets/furuhalls-logo.png'; 
+
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,6 +19,9 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Define the logo source using the absolute public path
+  const logoSrc = '/furuhalls-logo.png';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,7 +54,10 @@ function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>Furuhalls OTP</h1>
+          {/* ✅ LOGO USES ABSOLUTE PATH */}
+          <img src={logoSrc} alt="Furuhalls Logo" className="login-logo" />
+          
+          <h1>Furuhalls Flow</h1>
           <p>Order Tracking & Production</p>
         </div>
 
@@ -82,7 +96,7 @@ function LoginPage() {
         </form>
 
         <div className="login-footer">
-          <p>© 2024 Furuhalls. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Furuhalls. All rights reserved.</p>
         </div>
       </div>
     </div>
