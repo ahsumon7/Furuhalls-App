@@ -1,0 +1,836 @@
+import React, { useState, useMemo } from 'react';
+
+// Mock data based on requirements
+const initialOrders = [
+  {
+    id: 1,
+    articleNumber: 'D001',
+    articleName: 'Innerdörr Ek Standard',
+    quantity: 3,
+    unit: 'st',
+    orderNumber: 'O2024001',
+    customerNumber: 'K1001',
+    deliveryDate: '2024-11-15', // Tomorrow
+    status: '-',
+    specification: 'Montera handtag på höger sida',
+  },
+  {
+    id: 2,
+    articleNumber: 'D002',
+    articleName: 'Ytterdörr Tall Klassisk',
+    quantity: 1,
+    unit: 'st',
+    orderNumber: 'O2024002',
+    customerNumber: 'K1002',
+    deliveryDate: '2024-11-14', // Today
+    status: 'Stomme i lager',
+    specification: '',
+  },
+  {
+    id: 3,
+    articleNumber: 'D003',
+    articleName: 'Skjutdörr Björk Modern',
+    quantity: 2,
+    unit: 'st',
+    orderNumber: 'O2024003',
+    customerNumber: 'K1003',
+    deliveryDate: '2024-11-12', // Overdue
+    status: 'Försenad',
+    specification: 'Specialbeställning - extra bred',
+  },
+  {
+    id: 4,
+    articleNumber: 'D004',
+    articleName: 'Glasdörr Ek Premium',
+    quantity: 4,
+    unit: 'st',
+    orderNumber: 'O2024004',
+    customerNumber: 'K1004',
+    deliveryDate: '2024-11-20',
+    status: 'Dörr i lager',
+    specification: '',
+  },
+  {
+    id: 5,
+    articleNumber: 'D005',
+    articleName: 'Franska dörrar Tall Rustik',
+    quantity: 2,
+    unit: 'st',
+    orderNumber: 'O2024005',
+    customerNumber: 'K1001',
+    deliveryDate: '2024-11-18',
+    status: 'Stomme ej i lager',
+    specification: 'Lackering vit RAL 9010',
+  },
+  {
+    id: 6,
+    articleNumber: 'D006',
+    articleName: 'Pardörr Ek Delad',
+    quantity: 1,
+    unit: 'st',
+    orderNumber: 'O2024006',
+    customerNumber: 'K1005',
+    deliveryDate: '2024-11-25',
+    status: 'Klar',
+    specification: '',
+  },
+  {
+    id: 7,
+    articleNumber: 'D007',
+    articleName: 'Brandskyddsdörr Stål',
+    quantity: 3,
+    unit: 'st',
+    orderNumber: 'O2024007',
+    customerNumber: 'K1002',
+    deliveryDate: '2024-11-13', // Overdue
+    status: 'Försenad',
+    specification: 'EI60 certifierad',
+  },
+];
+
+const statusOptions = [
+  '-',
+  'Dörr i lager',
+  'Stomme i lager',
+  'Stomme ej i lager',
+  'Klar',
+  'Försenad',
+];
+
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+// Helper function to get tomorrow's date
+const getTomorrowDate = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+};
+
+// Helper function to determine priority
+const getPriority = (deliveryDate) => {
+  const today = getTodayDate();
+  const tomorrow = getTomorrowDate();
+
+  if (deliveryDate < today) {
+    return 'Försenad';
+  } else if (deliveryDate === today || deliveryDate === tomorrow) {
+    return 'Prio';
+  }
+  return null;
+};
+
+const getKpiIcon = (iconName) => {
+  const iconProps = {
+    width: 24,
+    height: 24,
+    stroke: 'currentColor',
+    fill: 'none',
+    strokeWidth: '2',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+  };
+
+  switch (iconName) {
+    case 'ClipboardList':
+      return (
+        <svg {...iconProps} viewBox='0 0 24 24'>
+          <rect x='8' y='2' width='8' height='4' rx='1' ry='1'></rect>
+          <path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'></path>
+          <line x1='9' y1='12' x2='15' y2='12'></line>
+          <line x1='9' y1='16' x2='15' y2='16'></line>
+        </svg>
+      );
+    case 'Wrench':
+      return (
+        <svg {...iconProps} viewBox='0 0 24 24'>
+          <path d='M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.71-3.71a1 1 0 0 0 0-1.41L18.61 2.5a1 1 0 0 0-1.41 0z'></path>
+          <path d='M11.21 16.07a1 1 0 0 0 0 1.4L13.84 20a1 1 0 0 0 1.4 0l.7-.7a1 1 0 0 0 0-1.41l-2.63-2.63a1 1 0 0 0-1.4 0z'></path>
+        </svg>
+      );
+    case 'Clock':
+      return (
+        <svg {...iconProps} viewBox='0 0 24 24'>
+          <circle cx='12' cy='12' r='10'></circle>
+          <polyline points='12 6 12 12 16 14'></polyline>
+        </svg>
+      );
+    case 'CheckCircle':
+      return (
+        <svg {...iconProps} viewBox='0 0 24 24'>
+          <path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'></path>
+          <polyline points='22 4 12 14.01 9 11.01'></polyline>
+        </svg>
+      );
+    default:
+      return <span style={{ fontSize: '18px' }}>?</span>;
+  }
+};
+
+function DashboardPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('Alla statusar');
+  const [filterCustomer, setFilterCustomer] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('deliveryDate');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  // Calculate KPIs
+  const statusCounts = useMemo(() => {
+    const counts = {
+      total: initialOrders.length,
+      inStorage: 0,
+      delayed: 0,
+      completed: 0,
+    };
+
+    initialOrders.forEach((order) => {
+      if (
+        order.status === 'Dörr i lager' ||
+        order.status === 'Stomme i lager'
+      ) {
+        counts.inStorage++;
+      }
+      if (
+        order.status === 'Försenad' ||
+        getPriority(order.deliveryDate) === 'Försenad'
+      ) {
+        counts.delayed++;
+      }
+      if (order.status === 'Klar') {
+        counts.completed++;
+      }
+    });
+
+    return counts;
+  }, []);
+
+  const kpiData = [
+    {
+      title: 'Totala Order',
+      count: statusCounts.total,
+      color: 'bg-indigo-600',
+      icon: 'ClipboardList',
+    },
+    {
+      title: 'I Lager',
+      count: statusCounts.inStorage,
+      color: 'bg-blue-500',
+      icon: 'Wrench',
+    },
+    {
+      title: 'Försenade',
+      count: statusCounts.delayed,
+      color: 'bg-red-500',
+      icon: 'Clock',
+    },
+    {
+      title: 'Klara',
+      count: statusCounts.completed,
+      color: 'bg-green-500',
+      icon: 'CheckCircle',
+    },
+  ];
+
+  // Get unique customer numbers for filter
+  const customerNumbers = useMemo(() => {
+    const customers = [...new Set(initialOrders.map((o) => o.customerNumber))];
+    return customers.sort();
+  }, []);
+
+  // Filtering and Sorting Logic
+  const sortedAndFilteredOrders = useMemo(() => {
+    let orders = [...initialOrders];
+
+    // Search filter
+    if (searchTerm) {
+      orders = orders.filter((order) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          order.articleNumber.toLowerCase().includes(searchLower) ||
+          order.articleName.toLowerCase().includes(searchLower) ||
+          order.orderNumber.toLowerCase().includes(searchLower) ||
+          order.customerNumber.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Status filter
+    if (filterStatus !== 'Alla statusar') {
+      orders = orders.filter((order) => order.status === filterStatus);
+    }
+
+    // Customer filter
+    if (filterCustomer) {
+      orders = orders.filter(
+        (order) => order.customerNumber === filterCustomer
+      );
+    }
+
+    // Date range filter
+    if (startDate) {
+      orders = orders.filter((order) => order.deliveryDate >= startDate);
+    }
+    if (endDate) {
+      orders = orders.filter((order) => order.deliveryDate <= endDate);
+    }
+
+    // Sorting
+    orders.sort((a, b) => {
+      let comparison = 0;
+
+      if (a[sortBy] > b[sortBy]) {
+        comparison = 1;
+      } else if (a[sortBy] < b[sortBy]) {
+        comparison = -1;
+      }
+
+      return sortDirection === 'asc' ? comparison : comparison * -1;
+    });
+
+    return orders;
+  }, [
+    searchTerm,
+    filterStatus,
+    filterCustomer,
+    startDate,
+    endDate,
+    sortBy,
+    sortDirection,
+  ]);
+
+  const handleSortChange = (key) => {
+    if (sortBy === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (key) => {
+    const isCurrentSort = sortBy === key;
+    const iconProps = {
+      className: 'ml-1 inline-block',
+      width: 16,
+      height: 16,
+      stroke: 'currentColor',
+      fill: 'none',
+      strokeWidth: '2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      style: {
+        opacity: isCurrentSort ? 1 : 0.5,
+        transition: 'opacity 0.2s',
+      },
+    };
+
+    if (isCurrentSort) {
+      if (sortDirection === 'asc') {
+        return (
+          <svg {...iconProps} viewBox='0 0 24 24'>
+            <path d='M12 19V5M5 12l7-7 7 7' />
+          </svg>
+        );
+      } else {
+        return (
+          <svg {...iconProps} viewBox='0 0 24 24'>
+            <path d='M12 5v14M19 12l-7 7-7-7' />
+          </svg>
+        );
+      }
+    } else {
+      return (
+        <svg {...iconProps} viewBox='0 0 24 24'>
+          <path d='M7 16l5 5 5-5M7 8l5-5 5 5' />
+        </svg>
+      );
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'Försenad':
+        return 'status-delayed';
+      case 'Dörr i lager':
+      case 'Stomme i lager':
+        return 'status-in-storage';
+      case 'Stomme ej i lager':
+        return 'status-not-in-storage';
+      case 'Klar':
+        return 'status-completed';
+      default:
+        return 'status-default';
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterStatus('Alla statusar');
+    setFilterCustomer('');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  return (
+    <div style={styles.dashboardPage}>
+      <header style={styles.dashboardHeader}>
+        <h2 style={styles.headerTitle}>
+          <span style={styles.logoText}>Furuhalls</span> Produktionssystem
+        </h2>
+        <div style={styles.headerActions}>
+          <button style={{ ...styles.btn, ...styles.btnPrimary }}>
+            Ny Order
+          </button>
+          <button style={{ ...styles.btn, ...styles.btnSecondary }}>
+            Excel Export
+          </button>
+        </div>
+      </header>
+
+      <div style={styles.dashboardDataAndFilters}>
+        <div style={styles.kpiSectionWrapper}>
+          <h3 style={styles.sectionHeader}>Översikt</h3>
+          <div style={styles.kpiGrid}>
+            {kpiData.map((kpi) => (
+              <div key={kpi.title} style={styles.kpiCard}>
+                <div
+                  style={{
+                    ...styles.kpiIcon,
+                    backgroundColor:
+                      kpi.color === 'bg-indigo-600'
+                        ? '#4f46e5'
+                        : kpi.color === 'bg-blue-500'
+                        ? '#3b82f6'
+                        : kpi.color === 'bg-red-500'
+                        ? '#ef4444'
+                        : '#22c55e',
+                  }}
+                >
+                  {getKpiIcon(kpi.icon)}
+                </div>
+                <div style={styles.kpiContent}>
+                  <p style={styles.kpiTitle}>{kpi.title}</p>
+                  <p style={styles.kpiCount}>{kpi.count}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={styles.filterPanel}>
+          <div style={styles.filterSection}>
+            <h3 style={styles.sectionHeader}>Filter & Sök</h3>
+            <div style={styles.filterControls}>
+              <div style={styles.filterGroup}>
+                <label style={styles.label}>Sök</label>
+                <input
+                  type='text'
+                  placeholder='Sök efter artikelnr, namn, order...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={styles.inputField}
+                />
+              </div>
+
+              <div style={styles.filterGroup}>
+                <label style={styles.label}>Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  style={styles.inputField}
+                >
+                  <option value='Alla statusar'>Alla statusar</option>
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.filterGroup}>
+                <label style={styles.label}>Kundnummer</label>
+                <select
+                  value={filterCustomer}
+                  onChange={(e) => setFilterCustomer(e.target.value)}
+                  style={styles.inputField}
+                >
+                  <option value=''>Alla kunder</option>
+                  {customerNumbers.map((customer) => (
+                    <option key={customer} value={customer}>
+                      {customer}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.filterGroup}>
+                <label style={styles.label}>Från datum</label>
+                <input
+                  type='date'
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={styles.inputField}
+                />
+              </div>
+
+              <div style={styles.filterGroup}>
+                <label style={styles.label}>Till datum</label>
+                <input
+                  type='date'
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  style={styles.inputField}
+                />
+              </div>
+
+              <div
+                style={{ ...styles.filterGroup, justifyContent: 'flex-end' }}
+              >
+                <button
+                  onClick={clearFilters}
+                  style={{
+                    ...styles.btn,
+                    ...styles.btnClear,
+                    marginTop: '20px',
+                  }}
+                >
+                  Rensa filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.orderTableContainer}>
+        <h3 style={styles.tableSummary}>
+          Produktionsorder
+          <span style={styles.tableSummaryCount}>
+            {sortedAndFilteredOrders.length} av {initialOrders.length} order
+            visas
+          </span>
+        </h3>
+
+        <div style={styles.tableWrapper}>
+          <table style={styles.orderTable}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Artikelnr</th>
+                <th style={styles.th}>Benämning</th>
+                <th style={styles.th}>Antal</th>
+                <th style={styles.th}>Ordernummer</th>
+                <th style={styles.th}>Kundnummer</th>
+                <th
+                  style={{ ...styles.th, cursor: 'pointer' }}
+                  onClick={() => handleSortChange('deliveryDate')}
+                >
+                  Leveransdatum {getSortIcon('deliveryDate')}
+                </th>
+                <th style={styles.th}>Specifikation</th>
+                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Åtgärder</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedAndFilteredOrders.map((order) => {
+                const priority = getPriority(order.deliveryDate);
+                return (
+                  <tr key={order.id} style={styles.tr}>
+                    <td style={styles.td}>{order.articleNumber}</td>
+                    <td style={styles.td}>{order.articleName}</td>
+                    <td style={styles.td}>
+                      {order.quantity} {order.unit}
+                    </td>
+                    <td style={styles.td}>{order.orderNumber}</td>
+                    <td style={styles.td}>{order.customerNumber}</td>
+                    <td style={styles.td}>
+                      {order.deliveryDate}
+                      {priority && (
+                        <span
+                          style={{
+                            ...styles.priorityBadge,
+                            backgroundColor:
+                              priority === 'Försenad' ? '#fee2e2' : '#fef3c7',
+                            color:
+                              priority === 'Försenad' ? '#dc2626' : '#d97706',
+                          }}
+                        >
+                          {priority}
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        ...styles.td,
+                        fontSize: '13px',
+                        color: '#64748b',
+                      }}
+                    >
+                      {order.specification || '-'}
+                    </td>
+                    <td style={styles.td}>
+                      <span
+                        style={{
+                          ...styles.statusBadge,
+                          ...getStatusStyle(order.status),
+                        }}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <button style={{ ...styles.btn, ...styles.btnAction }}>
+                        Redigera
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {sortedAndFilteredOrders.length === 0 && (
+            <p style={styles.noResults}>Inga order matchar de valda filtren.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const getStatusStyle = (status) => {
+  switch (status) {
+    case 'Försenad':
+      return { backgroundColor: '#fee2e2', color: '#dc2626' };
+    case 'Dörr i lager':
+    case 'Stomme i lager':
+      return { backgroundColor: '#dbeafe', color: '#2563eb' };
+    case 'Stomme ej i lager':
+      return { backgroundColor: '#fef3c7', color: '#d97706' };
+    case 'Klar':
+      return { backgroundColor: '#dcfce7', color: '#16a34a' };
+    default:
+      return { backgroundColor: '#f1f5f9', color: '#64748b' };
+  }
+};
+
+const styles = {
+  dashboardPage: {
+    padding: '30px',
+    backgroundColor: '#f8fafc',
+    minHeight: '100vh',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+  dashboardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '30px',
+    paddingBottom: '15px',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  headerTitle: {
+    fontSize: '28px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: 0,
+  },
+  logoText: {
+    color: '#4f46e5',
+  },
+  headerActions: {
+    display: 'flex',
+    gap: '10px',
+  },
+  btn: {
+    padding: '10px 18px',
+    borderRadius: '6px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    border: '1px solid transparent',
+    fontSize: '14px',
+  },
+  btnPrimary: {
+    backgroundColor: '#4f46e5',
+    color: 'white',
+  },
+  btnSecondary: {
+    backgroundColor: 'white',
+    color: '#4f46e5',
+    border: '1px solid #4f46e5',
+  },
+  btnAction: {
+    padding: '6px 12px',
+    backgroundColor: '#e0e7ff',
+    color: '#4f46e5',
+    fontSize: '12px',
+  },
+  btnClear: {
+    backgroundColor: '#f1f5f9',
+    color: '#64748b',
+    padding: '8px 16px',
+  },
+  dashboardDataAndFilters: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
+    marginBottom: '30px',
+  },
+  kpiSectionWrapper: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+  },
+  sectionHeader: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: '15px',
+    paddingBottom: '10px',
+    borderBottom: '2px solid #e2e8f0',
+    marginTop: 0,
+  },
+  kpiGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '15px',
+  },
+  kpiCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    padding: '15px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  kpiIcon: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    color: 'white',
+    marginRight: '15px',
+  },
+  kpiContent: {
+    flex: 1,
+  },
+  kpiTitle: {
+    fontSize: '14px',
+    color: '#64748b',
+    margin: 0,
+    marginBottom: '4px',
+  },
+  kpiCount: {
+    fontSize: '24px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: 0,
+  },
+  filterPanel: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+  },
+  filterSection: {},
+  filterControls: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '15px',
+  },
+  filterGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  label: {
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#475569',
+    marginBottom: '5px',
+  },
+  inputField: {
+    padding: '10px 12px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '14px',
+    transition: 'all 0.2s',
+  },
+  orderTableContainer: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden',
+  },
+  tableSummary: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#1e293b',
+    padding: '20px',
+    borderBottom: '2px solid #e2e8f0',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    margin: 0,
+  },
+  tableSummaryCount: {
+    fontSize: '14px',
+    fontWeight: '400',
+    color: '#64748b',
+  },
+  tableWrapper: {
+    overflowX: 'auto',
+  },
+  orderTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '14px',
+  },
+  th: {
+    padding: '12px 20px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    textAlign: 'left',
+    fontWeight: '600',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  td: {
+    padding: '12px 20px',
+    borderBottom: '1px solid #f1f5f9',
+    color: '#333',
+  },
+  tr: {
+    transition: 'background-color 0.2s',
+  },
+  statusBadge: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+  },
+  priorityBadge: {
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: '10px',
+    fontSize: '11px',
+    fontWeight: '700',
+    marginLeft: '8px',
+    textTransform: 'uppercase',
+  },
+  noResults: {
+    textAlign: 'center',
+    padding: '30px',
+    color: '#64748b',
+  },
+};
+
+export default DashboardPage;

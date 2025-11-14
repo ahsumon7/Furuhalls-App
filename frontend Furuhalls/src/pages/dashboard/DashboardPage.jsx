@@ -1,28 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import './DashboardPage.css';
 
-// Mock data based on your sketch, translated to English status terms
+// Mock data based on requirements
 const initialOrders = [
-  {
-    id: 3,
-    articleNumber: 'D003',
-    articleName: 'Sliding Door Birch Modern',
-    quantity: 2,
-    unit: 'pcs',
-    orderNumber: 'O2024003',
-    deliveryDate: '2024-01-12',
-    status: 'Delayed',
-  },
-  {
-    id: 5,
-    articleNumber: 'D005',
-    articleName: 'French Door Pine Rustic',
-    quantity: 2,
-    unit: 'pcs',
-    orderNumber: 'O2024005',
-    deliveryDate: '2024-01-14',
-    status: 'In Production',
-  },
   {
     id: 1,
     articleNumber: 'D001',
@@ -30,8 +10,10 @@ const initialOrders = [
     quantity: 3,
     unit: 'pcs',
     orderNumber: 'O2024001',
-    deliveryDate: '2024-01-15',
-    status: 'In Production',
+    customerNumber: 'K1001',
+    deliveryDate: '2024-11-15', // Tomorrow
+    status: '-',
+    specification: 'Mount handle on right side',
   },
   {
     id: 2,
@@ -40,8 +22,22 @@ const initialOrders = [
     quantity: 1,
     unit: 'pcs',
     orderNumber: 'O2024002',
-    deliveryDate: '2024-01-18',
-    status: 'Planned',
+    customerNumber: 'K1002',
+    deliveryDate: '2024-11-14', // Today
+    status: 'Frame in stock',
+    specification: '',
+  },
+  {
+    id: 3,
+    articleNumber: 'D003',
+    articleName: 'Sliding Door Birch Modern',
+    quantity: 2,
+    unit: 'pcs',
+    orderNumber: 'O2024003',
+    customerNumber: 'K1003',
+    deliveryDate: '2024-11-12', // Overdue
+    status: 'Delayed',
+    specification: 'Special order - extra wide',
   },
   {
     id: 4,
@@ -50,70 +46,101 @@ const initialOrders = [
     quantity: 4,
     unit: 'pcs',
     orderNumber: 'O2024004',
-    deliveryDate: '2024-01-20',
-    status: 'Planned',
+    customerNumber: 'K1004',
+    deliveryDate: '2024-11-20',
+    status: 'Door in stock',
+    specification: '',
   },
   {
-    id: 4,
+    id: 5,
     articleNumber: 'D005',
-    articleName: 'Glass Door Oak Premium',
-    quantity: 4,
+    articleName: 'French Doors Pine Rustic',
+    quantity: 2,
     unit: 'pcs',
-    orderNumber: 'O2024004',
-    deliveryDate: '2024-01-20',
-    status: 'Delayed',
-  },
-  {
-    id: 7,
-    articleNumber: 'D006',
-    articleName: 'Glass Door Oak Premium',
-    quantity: 4,
-    unit: 'pcs',
-    orderNumber: 'O2024004',
-    deliveryDate: '2024-01-20',
-    status: 'Delayed',
+    orderNumber: 'O2024005',
+    customerNumber: 'K1001',
+    deliveryDate: '2024-11-18',
+    status: 'Frame not in stock',
+    specification: 'White lacquer RAL 9010',
   },
   {
     id: 6,
-    articleNumber: 'D007',
-    articleName: 'Glass Door Oak Premium',
-    quantity: 4,
+    articleNumber: 'D006',
+    articleName: 'Double Door Oak Split',
+    quantity: 1,
     unit: 'pcs',
-    orderNumber: 'O2024004',
-    deliveryDate: '2024-01-20',
-    status: 'In Production',
+    orderNumber: 'O2024006',
+    customerNumber: 'K1005',
+    deliveryDate: '2024-11-25',
+    status: 'Complete',
+    specification: '',
+  },
+  {
+    id: 7,
+    articleNumber: 'D007',
+    articleName: 'Fire Door Steel',
+    quantity: 3,
+    unit: 'pcs',
+    orderNumber: 'O2024007',
+    customerNumber: 'K1002',
+    deliveryDate: '2024-11-13', // Overdue
+    status: 'Delayed',
+    specification: 'EI60 certified',
   },
   {
     id: 8,
     articleNumber: 'D008',
-    articleName: 'Glass Door Oak Premium',
-    quantity: 4,
+    articleName: 'Pocket Door Walnut',
+    quantity: 2,
     unit: 'pcs',
-    orderNumber: 'O2024004',
-    deliveryDate: '2024-01-20',
-    status: 'In Production',
-  },
-  {
-    id: 9,
-    articleNumber: 'D009',
-    articleName: 'Glass Door Oak Premium',
-    quantity: 4,
-    unit: 'pcs',
-    orderNumber: 'O2024004',
-    deliveryDate: '2024-01-20',
-    status: 'Delayed',
+    orderNumber: 'O2024008',
+    customerNumber: 'K1003',
+    deliveryDate: '2024-11-16',
+    status: 'Complete',
+    specification: 'Soft close mechanism',
   },
 ];
 
-const statusOptions = ['All Statuses', 'In Production', 'Delayed', 'Planned'];
-const sortOptions = ['Delivery Date', 'Article Number', 'Order Number'];
+const statusOptions = [
+  '-',
+  'Door in stock',
+  'Frame in stock',
+  'Frame not in stock',
+  'Complete',
+  'Delayed'
+];
+
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+// Helper function to get tomorrow's date
+const getTomorrowDate = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+};
+
+// Helper function to determine priority
+const getPriority = (deliveryDate) => {
+  const today = getTodayDate();
+  const tomorrow = getTomorrowDate();
+  
+  if (deliveryDate < today) {
+    return 'Delayed';
+  } else if (deliveryDate === today || deliveryDate === tomorrow) {
+    return 'Priority';
+  }
+  return null;
+};
 
 // HELPER FUNCTION TO RENDER SVG ICONS INLINE for KPI cards
 const getKpiIcon = (iconName) => {
   const iconProps = {
     width: 24,
     height: 24,
-    // Use 'currentColor' to inherit the parent's text color (which is white from .kpi-icon CSS)
     stroke: 'currentColor',
     fill: 'none',
     strokeWidth: '2',
@@ -131,13 +158,13 @@ const getKpiIcon = (iconName) => {
           <line x1='9' y1='16' x2='15' y2='16'></line>
         </svg>
       );
-    case 'Wrench':
+    case 'Package':
       return (
         <svg {...iconProps} viewBox='0 0 24 24'>
-          <path d='M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.71-3.71a1 1 0 0 0 0-1.41L18.61 2.5a1 1 0 0 0-1.41 0z'></path>
-          <path d='M11.21 16.07a1 1 0 0 0 0 1.4L13.84 20a1 1 0 0 0 1.4 0l.7-.7a1 1 0 0 0 0-1.41l-2.63-2.63a1 1 0 0 0-1.4 0z'></path>
-          <path d='M14 4l-1 4.5 4.5-1L14 4z'></path>
-          <path d='M12 15L3 22l7-7 9-9'></path>
+          <line x1='16.5' y1='9.4' x2='7.5' y2='4.21'></line>
+          <path d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'></path>
+          <polyline points='3.27 6.96 12 12.01 20.73 6.96'></polyline>
+          <line x1='12' y1='22.08' x2='12' y2='12'></line>
         </svg>
       );
     case 'Clock':
@@ -147,13 +174,11 @@ const getKpiIcon = (iconName) => {
           <polyline points='12 6 12 12 16 14'></polyline>
         </svg>
       );
-    case 'Calendar':
+    case 'CheckCircle':
       return (
         <svg {...iconProps} viewBox='0 0 24 24'>
-          <rect x='3' y='4' width='18' height='18' rx='2' ry='2'></rect>
-          <line x1='16' y1='2' x2='16' y2='6'></line>
-          <line x1='8' y1='2' x2='8' y2='6'></line>
-          <line x1='3' y1='10' x2='21' y2='10'></line>
+          <path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'></path>
+          <polyline points='22 4 12 14.01 9 11.01'></polyline>
         </svg>
       );
     default:
@@ -164,8 +189,11 @@ const getKpiIcon = (iconName) => {
 function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Statuses');
-  const [sortBy, setSortBy] = useState('Delivery Date');
-  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
+  const [filterCustomer, setFilterCustomer] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('deliveryDate');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   // Define the logo source using the absolute public path
   const logoSrc = '/furuhalls-logo.png';
@@ -173,85 +201,102 @@ function DashboardPage() {
   // Calculate KPIs (Key Performance Indicators)
   const statusCounts = useMemo(() => {
     const counts = {
-      'Total Orders': initialOrders.length,
-      'In Production': 0,
-      Delayed: 0,
-      Planned: 0,
+      total: initialOrders.length,
+      inStorage: 0,
+      delayed: 0,
+      completed: 0,
     };
+    
     initialOrders.forEach((order) => {
-      // Need to map the Swedish status in data to English keys
-      let key = order.status;
-      if (key === 'Försenad') key = 'Delayed';
-      if (key === 'I produktion') key = 'In Production';
-      if (key === 'Planerad') key = 'Planned';
-
-      if (counts.hasOwnProperty(key)) {
-        counts[key]++;
-      } else {
-        // Handle case where mock data might still contain Swedish values from previous runs
-        if (order.status === 'Försenad') counts['Delayed']++;
-        else if (order.status === 'I produktion') counts['In Production']++;
-        else if (order.status === 'Planerad') counts['Planned']++;
+      if (order.status === 'Door in stock' || order.status === 'Frame in stock') {
+        counts.inStorage++;
+      }
+      if (order.status === 'Delayed' || getPriority(order.deliveryDate) === 'Delayed') {
+        counts.delayed++;
+      }
+      if (order.status === 'Complete') {
+        counts.completed++;
       }
     });
+    
     return counts;
   }, []);
 
   const kpiData = [
     {
       title: 'Total Orders',
-      count: statusCounts['Total Orders'] || initialOrders.length,
+      count: statusCounts.total,
       color: 'bg-indigo-600',
       icon: 'ClipboardList',
     },
     {
-      title: 'In Production',
-      count: statusCounts['In Production'],
+      title: 'In Storage',
+      count: statusCounts.inStorage,
       color: 'bg-blue-500',
-      icon: 'Wrench',
+      icon: 'Package',
     },
     {
       title: 'Delayed',
-      count: statusCounts['Delayed'],
+      count: statusCounts.delayed,
       color: 'bg-red-500',
       icon: 'Clock',
     },
     {
-      title: 'Planned',
-      count: statusCounts['Planned'],
+      title: 'Completed',
+      count: statusCounts.completed,
       color: 'bg-green-500',
-      icon: 'Calendar',
+      icon: 'CheckCircle',
     },
   ];
+
+  // Get unique customer numbers for filter
+  const customerNumbers = useMemo(() => {
+    const customers = [...new Set(initialOrders.map(o => o.customerNumber))];
+    return customers.sort();
+  }, []);
 
   // Sorting and Filtering Logic
   const sortedAndFilteredOrders = useMemo(() => {
     let orders = [...initialOrders];
 
-    // Filtering (basic text search and status filter)
-    orders = orders.filter((order) => {
-      const matchesSearch = Object.values(order).some((val) =>
-        String(val).toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    // Search filter
+    if (searchTerm) {
+      orders = orders.filter((order) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          order.articleNumber.toLowerCase().includes(searchLower) ||
+          order.articleName.toLowerCase().includes(searchLower) ||
+          order.orderNumber.toLowerCase().includes(searchLower) ||
+          order.customerNumber.toLowerCase().includes(searchLower)
+        );
+      });
+    }
 
-      // Note: filterStatus uses English keys, but order.status uses the string from the initialOrders array ('Delayed', 'In Production', etc.)
-      const matchesStatus =
-        filterStatus === 'All Statuses' || order.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    });
+    // Status filter
+    if (filterStatus !== 'All Statuses') {
+      orders = orders.filter(order => order.status === filterStatus);
+    }
+
+    // Customer filter
+    if (filterCustomer) {
+      orders = orders.filter(order => order.customerNumber === filterCustomer);
+    }
+
+    // Date range filter
+    if (startDate) {
+      orders = orders.filter(order => order.deliveryDate >= startDate);
+    }
+    if (endDate) {
+      orders = orders.filter(order => order.deliveryDate <= endDate);
+    }
 
     // Sorting
     orders.sort((a, b) => {
-      let key;
-      if (sortBy === 'Delivery Date') key = 'deliveryDate';
-      else if (sortBy === 'Article Number') key = 'articleNumber';
-      else key = 'orderNumber'; // 'Order Number'
-
       let comparison = 0;
-
-      if (a[key] > b[key]) {
+      
+      if (a[sortBy] > b[sortBy]) {
         comparison = 1;
-      } else if (a[key] < b[key]) {
+      } else if (a[sortBy] < b[sortBy]) {
         comparison = -1;
       }
 
@@ -259,7 +304,7 @@ function DashboardPage() {
     });
 
     return orders;
-  }, [searchTerm, filterStatus, sortBy, sortDirection]);
+  }, [searchTerm, filterStatus, filterCustomer, startDate, endDate, sortBy, sortDirection]);
 
   const handleSortChange = (key) => {
     if (sortBy === key) {
@@ -284,7 +329,6 @@ function DashboardPage() {
       strokeWidth: '2',
       strokeLinecap: 'round',
       strokeLinejoin: 'round',
-      // Dim non-active icons slightly
       style: {
         opacity: isCurrentSort ? 1 : 0.5, 
         transition: 'opacity 0.2s',
@@ -293,14 +337,12 @@ function DashboardPage() {
 
     if (isCurrentSort) {
       if (sortDirection === 'asc') {
-        // Ascending (Up arrow)
         return (
           <svg {...iconProps} viewBox='0 0 24 24'>
             <path d='M12 19V5M5 12l7-7 7 7' />
           </svg>
         );
       } else {
-        // Descending (Down arrow)
         return (
           <svg {...iconProps} viewBox='0 0 24 24'>
             <path d='M12 5v14M19 12l-7 7-7-7' />
@@ -308,7 +350,6 @@ function DashboardPage() {
         );
       }
     } else {
-      // Unsorted (Up and Down arrows, or simply 'un-sorted' icon)
       return (
         <svg {...iconProps} viewBox='0 0 24 24'>
           <path d='M7 16l5 5 5-5M7 8l5-5 5 5' />
@@ -319,18 +360,26 @@ function DashboardPage() {
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'Delayed': // Note: Matches the English status in the mock data now
-      case 'Försenad': // Fallback for old data if needed
+      case 'Delayed':
         return 'status-delayed';
-      case 'In Production':
-      case 'I produktion':
-        return 'status-in-progress';
-      case 'Planned':
-      case 'Planerad':
-        return 'status-planned';
+      case 'Door in stock':
+      case 'Frame in stock':
+        return 'status-in-storage';
+      case 'Frame not in stock':
+        return 'status-not-in-storage';
+      case 'Complete':
+        return 'status-completed';
       default:
         return 'status-default';
     }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterStatus('All Statuses');
+    setFilterCustomer('');
+    setStartDate('');
+    setEndDate('');
   };
 
   return (
@@ -341,13 +390,12 @@ function DashboardPage() {
             src={logoSrc} 
             alt="Furuhalls Logo" 
             style={{ 
-              height: '75px', // Adjusted height for better header balance
+              height: '75px',
               width: 'auto',
               verticalAlign: 'middle', 
               marginRight: '12px' 
             }} 
           />
- 
         </h2>
         
         <div className='header-actions'>
@@ -356,12 +404,10 @@ function DashboardPage() {
         </div>
       </header>
    
-      {/* NEW: Combined KPI and Filter area */}
-      {/* This container needs to be styled with display: flex or grid in CSS 
-          to place the KPI section and the Filter panel side-by-side. */}
+      {/* Combined KPI and Filter area */}
       <div className='dashboard-data-and-filters'>
         
-        {/* KPI Section - Now includes its own title */}
+        {/* KPI Section */}
         <div className='kpi-section-wrapper'>
           <h3 className='section-header-kpi'>Dashboard Overview</h3>
           <div className='kpi-grid'> 
@@ -379,7 +425,7 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Filters and Search - Existing structure kept inside the new wrapper */}
+        {/* Filters and Search */}
         <div className='filter-panel'>
           <div className='filter-section'>
             <h3 className='filter-title'>Filters & Search</h3>
@@ -389,7 +435,7 @@ function DashboardPage() {
                 <input
                   id='search'
                   type='text'
-                  placeholder='Search'
+                  placeholder='Search by article, name, order...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className='input-field search-input'
@@ -404,6 +450,7 @@ function DashboardPage() {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className='input-field'
                 >
+                  <option value='All Statuses'>All Statuses</option>
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
                       {status}
@@ -413,19 +460,51 @@ function DashboardPage() {
               </div>
 
               <div className='filter-group'>
-                <label htmlFor='sort-by'>Sort By</label>
+                <label htmlFor='customer-filter'>Customer Number</label>
                 <select
-                  id='sort-by'
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  id='customer-filter'
+                  value={filterCustomer}
+                  onChange={(e) => setFilterCustomer(e.target.value)}
                   className='input-field'
                 >
-                  {sortOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
+                  <option value=''>All Customers</option>
+                  {customerNumbers.map((customer) => (
+                    <option key={customer} value={customer}>
+                      {customer}
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className='filter-group'>
+                <label htmlFor='start-date'>From Date</label>
+                <input
+                  id='start-date'
+                  type='date'
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className='input-field'
+                />
+              </div>
+
+              <div className='filter-group'>
+                <label htmlFor='end-date'>To Date</label>
+                <input
+                  id='end-date'
+                  type='date'
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className='input-field'
+                />
+              </div>
+
+              <div className='filter-group filter-actions'>
+                <button 
+                  onClick={clearFilters}
+                  className='btn btn-clear'
+                >
+                  Clear Filters
+                </button>
               </div>
             </div>
           </div>
@@ -437,8 +516,7 @@ function DashboardPage() {
         <h3 className='table-summary'>
           Production Orders
           <span>
-            {sortedAndFilteredOrders.length} of {initialOrders.length} orders
-            shown
+            {sortedAndFilteredOrders.length} of {initialOrders.length} orders shown
           </span>
         </h3>
 
@@ -449,39 +527,52 @@ function DashboardPage() {
               <th>Article Name</th>
               <th>Quantity</th>
               <th>Order Number</th>
+              <th>Customer Number</th>
               <th
                 className='sortable-header'
-                onClick={() => handleSortChange('Delivery Date')}
+                onClick={() => handleSortChange('deliveryDate')}
               >
-                Delivery Date {getSortIcon('Delivery Date')}
+                Delivery Date {getSortIcon('deliveryDate')}
               </th>
+              <th>Specification</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {/* Using index in addition to ID for key to handle duplicate IDs in mock data */}
-            {sortedAndFilteredOrders.map((order, index) => (
-              <tr key={order.id + '-' + index}>
-                <td>{order.articleNumber}</td>
-                <td>{order.articleName}</td>
-                <td>
-                  {order.quantity} {order.unit}
-                </td>
-                <td>{order.orderNumber}</td>
-                <td>{order.deliveryDate}</td>
-                <td>
-                  <span
-                    className={`status-badge ${getStatusClass(order.status)}`}
-                  >
-                    {order.status}
-                  </span>
-                </td>
-                <td>
-                  <button className='btn btn-action'>Edit</button>
-                </td>
-              </tr>
-            ))}
+            {sortedAndFilteredOrders.map((order) => {
+              const priority = getPriority(order.deliveryDate);
+              return (
+                <tr key={order.id}>
+                  <td>{order.articleNumber}</td>
+                  <td>{order.articleName}</td>
+                  <td>
+                    {order.quantity} {order.unit}
+                  </td>
+                  <td>{order.orderNumber}</td>
+                  <td>{order.customerNumber}</td>
+                  <td>
+                    {order.deliveryDate}
+                    {priority && (
+                      <span className={`priority-badge priority-${priority.toLowerCase()}`}>
+                        {priority}
+                      </span>
+                    )}
+                  </td>
+                  <td className='specification-cell'>
+                    {order.specification || '-'}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${getStatusClass(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button className='btn btn-action'>Edit</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {sortedAndFilteredOrders.length === 0 && (
